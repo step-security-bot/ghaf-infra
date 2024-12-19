@@ -28,7 +28,7 @@ remote_state {
 }
 
 inputs  = {
-  environment_name = "ghaf-infra-${local.env_name}"
+  environment_name = "ghaf-infra-${trimprefix(local.env_name, "user-")}"
   location = "northeurope"
 }
 
