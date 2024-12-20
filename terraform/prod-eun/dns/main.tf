@@ -29,6 +29,9 @@ resource "azurerm_dns_txt_record" "test" {
   }
 }
 
+output "zone_name" {
+  value = local.dns_suffix
+}
 
 output "name_servers" {
   value = azurerm_dns_zone.main.name_servers
