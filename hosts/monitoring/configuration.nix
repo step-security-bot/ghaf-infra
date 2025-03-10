@@ -19,6 +19,9 @@ in
   sops.secrets = {
     sshified_private_key.owner = "sshified";
     loki_basic_auth.owner = "nginx";
+    # github oauth app credentials
+    github_client_id.owner = "grafana";
+    github_client_secret.owner = "grafana";
   };
 
   imports =
@@ -34,7 +37,6 @@ in
       service-openssh
       service-nginx
       user-jrautiola
-      user-karim
     ]);
 
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
@@ -50,9 +52,12 @@ in
   users.users."sshified".isNormalUser = true;
 
   services.openssh.knownHosts = {
-    "65.21.20.242".publicKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILx4zU4gIkTY/1oKEOkf9gTJChdx/jR3lDgZ7p/c7LEK";
-    "95.217.177.197".publicKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICMmB3Ws5MVq0DgVu+Hth/8NhNAYEwXyz4B6FRCF6Nu2";
-    "95.216.200.85".publicKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIALs+OQDrCKRIKkwTwI4MI+oYC3RTEus9cXCBcIyRHzl";
+    "65.21.20.242".publicKey =
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILx4zU4gIkTY/1oKEOkf9gTJChdx/jR3lDgZ7p/c7LEK";
+    "95.217.177.197".publicKey =
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICMmB3Ws5MVq0DgVu+Hth/8NhNAYEwXyz4B6FRCF6Nu2";
+    "95.216.200.85".publicKey =
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIALs+OQDrCKRIKkwTwI4MI+oYC3RTEus9cXCBcIyRHzl";
   };
 
   # runs a tiny webserver on port 8888 that tunnels requests through ssh connection
@@ -108,10 +113,25 @@ in
       # https://grafana.com/docs/grafana/latest/setup-grafana/configure-security/configure-security-hardening
       security = {
         cookie_secure = true;
-        cookie_samesite = "strict";
+        # we cannot use 'strict' here or github oauth cannot set the login cookie
+        cookie_samesite = "lax";
         login_cookie_name = "__Host-grafana_session";
         strict_transport_security = true;
       };
+
+      # github OIDC
+      "auth.github" = {
+        enabled = true;
+        client_id = "$__file{${config.sops.secrets.github_client_id.path}}";
+        client_secret = "$__file{${config.sops.secrets.github_client_secret.path}}";
+        allowed_organizations = [ "tiiuae" ];
+        allow_assign_grafana_admin = true;
+        team_ids = "7362549"; # devenv-fi
+        role_attribute_path = "contains(groups[*], '@tiiuae/devenv-fi') && 'GrafanaAdmin'";
+      };
+
+      # disable username/password auth
+      auth.disable_login_form = true;
     };
 
     provision.datasources.settings.datasources = [
@@ -175,6 +195,21 @@ in
 
     globalConfig.scrape_interval = "15s";
 
+    # blackbox exporter can ping abritrary urls for us
+    exporters.blackbox = {
+      enable = true;
+      listenAddress = "127.0.0.1";
+      configFile = pkgs.writeText "probes.yml" (
+        builtins.toJSON {
+          modules.https_success = {
+            prober = "http";
+            tcp.tls = true;
+            http.headers.User-Agent = "blackbox-exporter";
+          };
+        }
+      );
+    };
+
     scrapeConfigs = [
       {
         job_name = "ficolo-internal-monitoring";
@@ -221,13 +256,6 @@ in
               machine_name = "monitoring";
             };
           }
-          #Alerts for cache.vedenemo.dev should be disabled. It's shut down.
-          # {
-          #   targets = [ "172.18.20.109:9100" ];
-          #   labels = {
-          #     machine_name = "binarycache";
-          #   };
-          # }
         ];
       }
       {
@@ -251,6 +279,46 @@ in
             targets = [ "95.216.200.85:9100" ];
             labels = {
               machine_name = "ghaf-proxy";
+            };
+          }
+        ];
+      }
+      {
+        job_name = "blackbox";
+        metrics_path = "/probe";
+        params.module = [ "https_success" ];
+        relabel_configs = [
+          {
+            source_labels = [ "__address__" ];
+            target_label = "__param_target";
+          }
+          {
+            source_labels = [ "__param_target" ];
+            target_label = "instance";
+          }
+          {
+            source_labels = [ "__param_target" ];
+            target_label = "machine_name";
+          }
+          {
+            target_label = "__address__";
+            replacement = "127.0.0.1:9115";
+          }
+        ];
+        static_configs = [
+          {
+            targets = [
+              "ghaf-jenkins-controller-prod.northeurope.cloudapp.azure.com"
+              "prod-cache.vedenemo.dev"
+            ];
+            labels = {
+              env = "prod";
+            };
+          }
+          {
+            targets = [ "ghaf-jenkins-controller-dev.northeurope.cloudapp.azure.com" ];
+            labels = {
+              env = "dev";
             };
           }
         ];

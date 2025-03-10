@@ -10,8 +10,6 @@ hrosten:
 jrautiola:
  - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGlFqSQFoSSuAS1IjmWBFXie329I5Aqf71QhVOnLTBG+ joonas@x1
  - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIB3h/Aj66ndKFtqpQ8H53tE9KbbO0obThC0qbQQKFQRr joonas@zeus
-karim:
- - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOWo1W2XgAYxqntPxdI0k7K/3EgWB6lAaPkEwUwUT2Ey karim@nixos
 cazfi:
  - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHzAww8Md+anrVfg93jNYey35Lu/YPEdbEh9QRu+riyf cazfi@cazfi-wlt
 vjuntunen:
@@ -24,3 +22,8 @@ alextserepov:
 fayad:
  - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKn694TOPl6NvWsFYj2dfO4Lv083Tv7mQRPv9Ik+jxcY fayad@3seven
  - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAzseP8ZDS7merc6GAExuNJW6eg01ZWh/V3sVuFIREEK fayad@n1xb0x
+ctsopokis:
+ - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOH7yLqai1AxFdsMxVS3NMcL+GBiTxqSveBb2Qc0gkZ2
+kanyfantakis:
+ - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMiCQja2DUn5VTDMjXpPkZokiUdtUjfWNs2IvklFMQIe 
+

@@ -70,7 +70,7 @@ let
         print(s.value)
       '';
 
-  # nixos 24.05 pkgs is used for rclone and jenkins-job-builder
+  # nixos 24.05 pkgs is used for rclone
   old-pkgs = import inputs.nixpkgs-24-05 { inherit (pkgs) system; };
 
   # rclone 1.68.2 breaks our pipelines, keep using the old 1.66 version
@@ -106,15 +106,6 @@ in
       "x-systemd.growfs"
     ];
   };
-
-  # https://github.com/NixOS/nixpkgs/issues/362054
-  # Use jenkins-job-builder from nixos-24.05, as it's broken in 24.11.
-  # Needs to be an overlay so that it propagates to service.jenkins.jobBuilder
-  nixpkgs.overlays = [
-    (_: _: {
-      inherit (old-pkgs) jenkins-job-builder;
-    })
-  ];
 
   services.jenkins = {
     enable = true;
@@ -152,6 +143,8 @@ in
       "-Dcom.cloudbees.workflow.rest.external.JobExt.maxRunsPerJob=32"
     ];
 
+    plugins = import ./plugins.nix { inherit (pkgs) stdenv fetchurl; };
+
     # Configure jenkins job(s):
     # https://jenkins-job-builder.readthedocs.io/en/latest/project_pipeline.html
     # https://github.com/NixOS/nixpkgs/blob/master/nixos/modules/services/continuous-integration/jenkins/job-builder.nix
@@ -185,6 +178,7 @@ in
             "Ghaf pre-merge pipeline" = "ghaf-pre-merge-pipeline";
             "Ghaf nightly pipeline" = "ghaf-nightly-pipeline";
             "Ghaf release pipeline" = "ghaf-release-pipeline";
+            "Ghaf performance tests" = "ghaf-perftest-pipeline";
             "Ghaf HW test" = "ghaf-hw-test";
             "Ghaf parallel HW test" = "ghaf-parallel-hw-test";
             "FMO OS main pipeline" = "fmo-os-main-pipeline";
@@ -242,13 +236,6 @@ in
         '';
       in
       ''
-        # Install plugins
-        jenkins-cli ${jenkins-auth} install-plugin \
-          "workflow-aggregator" "github" "timestamper" "pipeline-stage-view" "blueocean" \
-          "pipeline-graph-view" "github-pullrequest" "antisamy-markup-formatter" \
-          "configuration-as-code" "slack" "pipeline-utility-steps" "pipeline-build-step" \
-          "robot" "copyartifact"
-
         # Disable initial install
         jenkins-cli ${jenkins-auth} groovy = < ${jenkins-groovy}
 
